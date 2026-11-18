@@ -85,7 +85,7 @@ This project is a convenience launcher for standard browser profile isolation, n
 
 ## Full platform-signal inspector (local-only)
 
-The additional [profile-login-full.sh](profile-login-full.sh) script opens Firefox or Chrome/Chromium using a dedicated browser profile and displays a local diagnostic page for **five browser/device-platform signals**:
+The additional [profile-login-full.sh](profile-login-full.sh) script opens Firefox or Chrome/Chromium using a dedicated browser profile and displays **five observed browser/device-platform signals side by side with illustrative Android 14 / Samsung SM-S918W targets**. It also exports a local JSON evidence file:
 
 | Signal | What it shows |
 |---|---|
@@ -109,4 +109,4 @@ less profile-login-full.sh
 bash profile-login-full.sh
 ```
 
-**Privacy and scope:** The diagnostic page runs on `127.0.0.1` with a randomly assigned local port and does not send its results to external servers. It does **not** change platform signals or claim managed-device identity. Missing Client Hints are reported as unsupported/not sent, not fabricated. The local test server stops when the script exits; close the browser window to return to the shell.
+**Privacy and scope:** The diagnostic page runs on `127.0.0.1` with a randomly assigned local port and does not send its results to external servers. The Android target is a comparison-only simulation: it does **not** change HTTP headers, browser JavaScript properties, platform signals, or claim managed-device identity. Missing Client Hints are reported as unsupported/not sent, not fabricated. The local test server stops when the script exits; close the browser window to return to the shell.
