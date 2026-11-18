@@ -81,3 +81,32 @@ For Snap-installed browsers, remove their dedicated `profile-login-profile` dire
 ## Scope
 
 This project is a convenience launcher for standard browser profile isolation, not an official authentication client or a way around security controls.
+
+
+## Full platform-signal inspector (local-only)
+
+The additional [profile-login-full.sh](profile-login-full.sh) script opens Firefox or Chrome/Chromium using a dedicated browser profile and displays a local diagnostic page for **five browser/device-platform signals**:
+
+| Signal | What it shows |
+|---|---|
+| HTTP `User-Agent` | Browser identity and claimed OS in request headers |
+| `navigator.userAgent` | JavaScript-visible User-Agent |
+| `navigator.platform` | JavaScript-visible platform |
+| `navigator.userAgentData` | User-Agent Client Hints, where supported |
+| `Sec-CH-UA-Platform` | Platform Client Hint in requests, where supported |
+
+Run it directly:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/themehdi/profile-poc/main/profile-login-full.sh)"
+```
+
+Or download and inspect it first:
+
+```bash
+curl -fL -o profile-login-full.sh https://raw.githubusercontent.com/themehdi/profile-poc/main/profile-login-full.sh
+less profile-login-full.sh
+bash profile-login-full.sh
+```
+
+**Privacy and scope:** The diagnostic page runs on `127.0.0.1` with a randomly assigned local port and does not send its results to external servers. It does **not** change platform signals or claim managed-device identity. Missing Client Hints are reported as unsupported/not sent, not fabricated. The local test server stops when the script exits; close the browser window to return to the shell.
