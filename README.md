@@ -85,7 +85,7 @@ This project is a convenience launcher for standard browser profile isolation, n
 
 ## Full platform-signal inspector (local-only)
 
-The additional [profile-login-full.sh](profile-login-full.sh) script opens Firefox or Chrome/Chromium using a dedicated browser profile and displays **five observed browser/device-platform signals side by side with illustrative Android 14 / Samsung SM-S918W targets**. It also exports a local JSON evidence file:
+The additional [profile-login-full.sh](profile-login-full.sh) script opens Firefox or Chrome/Chromium using a dedicated browser profile and displays **five observed browser/device-platform signals side by side with illustrative Android 14 / Samsung SM-S918W targets**. It also exports a local JSON evidence file. Chromium additionally attempts to collect high-entropy User-Agent Client Hints (platform version, architecture, model, bitness, and version list), when the browser supports them. Firefox reports unsupported Client Hints rather than inventing values:
 
 | Signal | What it shows |
 |---|---|
