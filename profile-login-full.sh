@@ -44,13 +44,30 @@ code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radi
 <script>
 (async () => {
   const androidUA = 'Mozilla/5.0 (Linux; Android 14; SM-S918W) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
-  const simulated = {
+  const expected = {
     'HTTP User-Agent':androidUA,
     'navigator.userAgent':androidUA,
-    'navigator.platform':'Linux armv8l (illustrative Android platform value)',
+    'navigator.platform':'Linux armv8l',
     'navigator.userAgentData':JSON.stringify({platform:'Android',mobile:true,brands:[{brand:'Google Chrome',version:'131'},{brand:'Chromium',version:'131'}]}),
     'Sec-CH-UA-Platform':'"Android"'
   };
+  const overrideResults={};
+  const testUAData = {
+    platform:'Android', mobile:true,
+    brands:[{brand:'Google Chrome',version:'131'},{brand:'Chromium',version:'131'}],
+    getHighEntropyValues:async (hints)=>{
+      const values={platform:'Android',platformVersion:'14.0.0',architecture:'arm',model:'SM-S918W',bitness:'64',fullVersionList:[{brand:'Google Chrome',version:'131.0.0.0'},{brand:'Chromium',version:'131.0.0.0'}]};
+      return Object.fromEntries(hints.filter(k=>k in values).map(k=>[k,values[k]]));
+    }
+  };
+  for (const [key,value] of Object.entries({userAgent:androidUA,platform:'Linux armv8l',userAgentData:testUAData})) {
+    try {
+      Object.defineProperty(navigator,key,{configurable:true,get:()=>value});
+      overrideResults[key]='applied on this localhost page';
+    } catch(e) {
+      overrideResults[key]='not applied: '+String(e);
+    }
+  }
   try {
     const headers=await fetch('/inspect',{cache:'no-store'}).then(r=>r.json());
     const uaData=navigator.userAgentData;
@@ -82,7 +99,7 @@ code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radi
       body.appendChild(tr);
     }
     const unsupported=Object.values(observed).filter(v=>v==='Not supported'||v==='Not sent').length;
-    document.getElementById('summary').textContent='Page-local JavaScript override results: '+JSON.stringify(overrideResults)+'. HTTP User-Agent and Sec-CH-UA-Platform above are the actual request headers and are not overridden. '+unsupported+' signal(s) unavailable or not transmitted.';
+    document.getElementById('summary').textContent='Page-local override results: '+JSON.stringify(overrideResults)+'. HTTP User-Agent and Sec-CH-UA-Platform are measured from the actual request and are not modified by this page. '+unsupported+' signal(s) unavailable or not transmitted.';
     document.getElementById('export').disabled=false;
     document.getElementById('export').addEventListener('click',()=>{
       const evidence={test:'Android platform signal override POC',mode:'JavaScript overrides scoped to this localhost page only; HTTP headers unchanged',timestamp:new Date().toISOString(),target:'Android 14 SM-S918W Chrome 131 Mobile test profile',overrideResults,observed,expected};
