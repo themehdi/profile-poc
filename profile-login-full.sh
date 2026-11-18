@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Profile Login Full - localhost browser-platform signal inspector
-# Reports client-provided identity signals without modifying them.
+# Profile Login Full - localhost Android platform signal simulation
+# Compares five actual browser signals against simulated Android values. Does not alter browser identity.
 set -Eeuo pipefail
 
 WORK="$(mktemp -d)"
@@ -26,36 +26,62 @@ from pathlib import Path
 
 HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Browser Platform Signals — Local POC</title>
-<style>body{font:16px system-ui,sans-serif;margin:2rem auto;max-width:850px;padding:0 1rem;color:#172033}
-table{border-collapse:collapse;width:100%;table-layout:fixed}td,th{border-bottom:1px solid #ddd;padding:.8rem;text-align:left;overflow-wrap:anywhere}
-th:first-child{width:35%}code{font:13px ui-monospace,monospace}small{color:#555}</style></head><body>
-<h1>Browser Platform Signals</h1><p><strong>Local-only diagnostic.</strong> This page reports the browser's current signals without modifying or transmitting them to a remote service.</p>
-<table><thead><tr><th>Signal</th><th>Observed value</th></tr></thead><tbody id="signals"></tbody></table>
-<p><small>Client Hints may be unavailable in Firefox or depend on the browser/request context. Values here are not evidence of device compliance, enrollment, or trusted device identity.</small></p>
+<title>Android Platform Simulation — Local POC</title>
+<style>
+body{font:15px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#202938;background:#fafbfd}
+h1{font-size:1.65rem}table{border-collapse:collapse;width:100%;table-layout:fixed;background:white}
+th,td{border:1px solid #dfe4ed;text-align:left;padding:.7rem;overflow-wrap:anywhere;vertical-align:top}
+th:nth-child(1){width:20%}th:nth-child(2){width:37%}th:nth-child(3){width:37%}
+code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radius:6px;padding:.65rem 1rem;cursor:pointer}
+.note{background:#edf2fa;padding:1rem;border-radius:8px}.muted{color:#586477}.ok{color:#16653e}.different{color:#9b4c00}
+</style></head><body>
+<h1>Android 14 platform identity — local simulation</h1>
+<p class="note"><strong>Simulation only:</strong> the Android values below are illustrative expected values. The browser's actual HTTP headers, JavaScript properties, device claims, and sign-in behavior are <strong>not changed</strong>. No data is transmitted outside localhost.</p>
+<p>Target: Android 14 · Samsung SM-S918W · Chrome 131 Mobile</p>
+<table><thead><tr><th>Signal</th><th>Observed in browser</th><th>Simulated Android value</th></tr></thead><tbody id="signals"><tr><td colspan="3">Reading local browser signals…</td></tr></tbody></table>
+<p id="summary" class="muted"></p><button id="export" type="button" disabled>Download local JSON evidence</button>
+<p class="muted">Client Hints may be absent, especially in Firefox. A matching browser property does not imply Intune compliance, Entra registration, or trusted device identity.</p>
 <script>
 (async () => {
-  const headers = await fetch('/inspect', {cache:'no-store'}).then(r=>r.json());
-  const uaData = navigator.userAgentData;
-  let hints = 'Not supported';
-  if (uaData) {
-    hints = JSON.stringify({platform:uaData.platform, mobile:uaData.mobile, brands:uaData.brands});
-  }
-  const values = [
-    ['HTTP User-Agent', headers['user-agent'] ?? 'Not sent'],
-    ['navigator.userAgent', navigator.userAgent],
-    ['navigator.platform', navigator.platform || 'Unavailable'],
-    ['navigator.userAgentData', hints],
-    ['Sec-CH-UA-Platform', headers['sec-ch-ua-platform'] ?? 'Not sent']
-  ];
-  const body = document.getElementById('signals');
-  for (const [name,value] of values) {
-    const tr=document.createElement('tr');
-    for(const item of [name,value]) {
-      const td=document.createElement('td'); const c=document.createElement('code');
-      c.textContent=item; td.appendChild(c); tr.appendChild(td);
+  const androidUA = 'Mozilla/5.0 (Linux; Android 14; SM-S918W) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  const simulated = {
+    'HTTP User-Agent':androidUA,
+    'navigator.userAgent':androidUA,
+    'navigator.platform':'Linux armv8l (illustrative Android platform value)',
+    'navigator.userAgentData':JSON.stringify({platform:'Android',mobile:true,brands:[{brand:'Google Chrome',version:'131'},{brand:'Chromium',version:'131'}]}),
+    'Sec-CH-UA-Platform':'"Android"'
+  };
+  try {
+    const headers=await fetch('/inspect',{cache:'no-store'}).then(r=>r.json());
+    const uaData=navigator.userAgentData;
+    const observed={
+      'HTTP User-Agent':headers['user-agent']??'Not sent',
+      'navigator.userAgent':navigator.userAgent,
+      'navigator.platform':navigator.platform||'Unavailable',
+      'navigator.userAgentData':uaData?JSON.stringify({platform:uaData.platform,mobile:uaData.mobile,brands:uaData.brands}):'Not supported',
+      'Sec-CH-UA-Platform':headers['sec-ch-ua-platform']??'Not sent'
+    };
+    const body=document.getElementById('signals');
+    body.textContent='';
+    for(const name of Object.keys(simulated)){
+      const tr=document.createElement('tr');
+      for(const value of [name,observed[name],simulated[name]]){
+        const td=document.createElement('td');const code=document.createElement('code');
+        code.textContent=value;td.appendChild(code);tr.appendChild(td);
+      }
+      body.appendChild(tr);
     }
-    body.appendChild(tr);
+    document.getElementById('summary').textContent='Displayed: 5 observed signals and 5 simulated Android target values. Differences show what a platform classification test would need to investigate.';
+    document.getElementById('export').disabled=false;
+    document.getElementById('export').addEventListener('click',()=>{
+      const evidence={test:'Android platform signal simulation',mode:'local comparison only; no signal modification',timestamp:new Date().toISOString(),target:'Android 14 SM-S918W Chrome 131 Mobile',observed,simulated};
+      const blob=new Blob([JSON.stringify(evidence,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');link.href=url;link.download='android-platform-simulation.json';link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
+  }catch(err){
+    document.getElementById('signals').textContent='Local inspection failed: '+String(err);
   }
 })();
 </script></body></html>"""
