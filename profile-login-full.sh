@@ -54,11 +54,21 @@ code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radi
   try {
     const headers=await fetch('/inspect',{cache:'no-store'}).then(r=>r.json());
     const uaData=navigator.userAgentData;
+    let uaDetail='Not supported';
+    if (uaData) {
+      const basic={platform:uaData.platform,mobile:uaData.mobile,brands:uaData.brands};
+      try {
+        const high=await uaData.getHighEntropyValues(['platformVersion','architecture','model','bitness','fullVersionList']);
+        uaDetail=JSON.stringify({basic,highEntropy:high});
+      } catch(e) {
+        uaDetail=JSON.stringify({basic,highEntropyError:String(e)});
+      }
+    }
     const observed={
       'HTTP User-Agent':headers['user-agent']??'Not sent',
       'navigator.userAgent':navigator.userAgent,
       'navigator.platform':navigator.platform||'Unavailable',
-      'navigator.userAgentData':uaData?JSON.stringify({platform:uaData.platform,mobile:uaData.mobile,brands:uaData.brands}):'Not supported',
+      'navigator.userAgentData':uaDetail,
       'Sec-CH-UA-Platform':headers['sec-ch-ua-platform']??'Not sent'
     };
     const body=document.getElementById('signals');
@@ -71,7 +81,8 @@ code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radi
       }
       body.appendChild(tr);
     }
-    document.getElementById('summary').textContent='Displayed: 5 observed signals and 5 simulated Android target values. Differences show what a platform classification test would need to investigate.';
+    const unsupported=Object.values(observed).filter(v=>v==='Not supported'||v==='Not sent').length;
+    document.getElementById('summary').textContent='5 observed signals compared against Android illustration. '+unsupported+' signal(s) unavailable or not transmitted. This does not modify the network identity or device trust.';
     document.getElementById('export').disabled=false;
     document.getElementById('export').addEventListener('click',()=>{
       const evidence={test:'Android platform signal simulation',mode:'local comparison only; no signal modification',timestamp:new Date().toISOString(),target:'Android 14 SM-S918W Chrome 131 Mobile',observed,simulated};
@@ -120,8 +131,8 @@ done
 [[ -s "$WORK/port" ]] || { echo 'Unable to start local server.' >&2; exit 1; }
 URL="http://127.0.0.1:$(cat "$WORK/port")/"
 echo "Local browser signal report: $URL"
-echo '1) Firefox'
-echo '2) Chrome / Chromium'
+echo '1) Firefox (local diagnostic; Client Hints may be unsupported)'
+echo '2) Chrome / Chromium (local diagnostic; Client Hints when available)'
 echo '3) Exit'
 read -r -p 'Choose browser [1-3]: ' choice
 case "$choice" in
