@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Profile Login Full - localhost Android platform signal simulation
-# Compares five actual browser signals against simulated Android values. Does not alter browser identity.
+# Profile Login Full - localhost Android signal override POC
+# Applies JavaScript-only overrides on this local test origin; reports real HTTP headers separately.
 set -Eeuo pipefail
 
 WORK="$(mktemp -d)"
@@ -35,12 +35,12 @@ th:nth-child(1){width:20%}th:nth-child(2){width:37%}th:nth-child(3){width:37%}
 code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radius:6px;padding:.65rem 1rem;cursor:pointer}
 .note{background:#edf2fa;padding:1rem;border-radius:8px}.muted{color:#586477}.ok{color:#16653e}.different{color:#9b4c00}
 </style></head><body>
-<h1>Android 14 platform identity — local simulation</h1>
-<p class="note"><strong>Simulation only:</strong> the Android values below are illustrative expected values. The browser's actual HTTP headers, JavaScript properties, device claims, and sign-in behavior are <strong>not changed</strong>. No data is transmitted outside localhost.</p>
-<p>Target: Android 14 · Samsung SM-S918W · Chrome 131 Mobile</p>
+<h1>Android platform signal override POC — localhost only</h1>
+<p class="note"><strong>Scope:</strong> this page applies JavaScript property overrides only within this local test page. It does not alter browser-wide identity, HTTP request headers, Client Hints, device registration, or sign-in trust. No data is transmitted outside localhost.</p>
+<p>Test profile: Android 14 · Samsung SM-S918W · Chrome 131 Mobile (test values)</p>
 <table><thead><tr><th>Signal</th><th>Observed in browser</th><th>Simulated Android value</th></tr></thead><tbody id="signals"><tr><td colspan="3">Reading local browser signals…</td></tr></tbody></table>
 <p id="summary" class="muted"></p><button id="export" type="button" disabled>Download local JSON evidence</button>
-<p class="muted">Client Hints may be absent, especially in Firefox. A matching browser property does not imply Intune compliance, Entra registration, or trusted device identity.</p>
+<p class="muted">Firefox may not expose User-Agent Client Hints. The JavaScript values are page-local test overrides, not proof of Android hardware, Intune compliance, Entra registration, or trusted device identity. The server records the actual HTTP headers received.</p>
 <script>
 (async () => {
   const androidUA = 'Mozilla/5.0 (Linux; Android 14; SM-S918W) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
@@ -73,19 +73,19 @@ code{font-size:12px}button{border:1px solid #9caaba;background:white;border-radi
     };
     const body=document.getElementById('signals');
     body.textContent='';
-    for(const name of Object.keys(simulated)){
+    for(const name of Object.keys(expected)){
       const tr=document.createElement('tr');
-      for(const value of [name,observed[name],simulated[name]]){
+      for(const value of [name,observed[name],expected[name]]){
         const td=document.createElement('td');const code=document.createElement('code');
         code.textContent=value;td.appendChild(code);tr.appendChild(td);
       }
       body.appendChild(tr);
     }
     const unsupported=Object.values(observed).filter(v=>v==='Not supported'||v==='Not sent').length;
-    document.getElementById('summary').textContent='5 observed signals compared against Android illustration. '+unsupported+' signal(s) unavailable or not transmitted. This does not modify the network identity or device trust.';
+    document.getElementById('summary').textContent='Page-local JavaScript override results: '+JSON.stringify(overrideResults)+'. HTTP User-Agent and Sec-CH-UA-Platform above are the actual request headers and are not overridden. '+unsupported+' signal(s) unavailable or not transmitted.';
     document.getElementById('export').disabled=false;
     document.getElementById('export').addEventListener('click',()=>{
-      const evidence={test:'Android platform signal simulation',mode:'local comparison only; no signal modification',timestamp:new Date().toISOString(),target:'Android 14 SM-S918W Chrome 131 Mobile',observed,simulated};
+      const evidence={test:'Android platform signal override POC',mode:'JavaScript overrides scoped to this localhost page only; HTTP headers unchanged',timestamp:new Date().toISOString(),target:'Android 14 SM-S918W Chrome 131 Mobile test profile',overrideResults,observed,expected};
       const blob=new Blob([JSON.stringify(evidence,null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob);
       const link=document.createElement('a');link.href=url;link.download='android-platform-simulation.json';link.click();
